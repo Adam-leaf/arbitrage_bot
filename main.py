@@ -29,6 +29,10 @@ def parse_price(data, source, out_decimals=6, init_amount=1000.0):
             price_per_token = total_out_amount / init_amount
             # Jupiter impact is not in percentage need to *100
             impact = float(data['priceImpactPct'])*100
+            
+            if impact == 0:
+                save_trade_data(data, 'file.json')
+            
             return price_per_token, impact
         
         elif source == "Odos":
@@ -67,15 +71,31 @@ def calc_ideal_swap(base_price, sol_price, base_impact, sol_impact, trade_action
     # base_impact = 0.06  
     # sol_impact = 0.5  
 
+    # Downsize for testing
+    # base - 0.1
+    # sol - 0.2
+
+    # gap - 0.1
+    # target_gap - 0.05
+
+    # target_base - 0.125
+    # target_sol - 0.175
+
+    # - how much luna to buy to get target_base
+    # - how much luna to sell to get target_sol
+
     # Convert impact from percentage to decimal
     base_impact = base_impact / 100
     sol_impact = sol_impact / 100
+    print(f"Ori: Base - {base_impact}, Sol - {sol_impact}")
     
     # These impacts are for 1000 token swap, so we need to normalize them
     # If impact is p% for 1000 tokens, then for x tokens it's p * sqrt(x/1000)
     # So we need to divide our impact coefficients by sqrt(1000)
     base_impact = base_impact / math.sqrt(1000)
     sol_impact = sol_impact / math.sqrt(1000)
+
+    print(f"Mod: Base - {base_impact}, Sol - {sol_impact}")
 
     # Calculate initial gap
     initial_gap = abs(sol_price - base_price)
@@ -169,6 +189,8 @@ async def price_checker(delay: int = 1, init_amount: float = 1000.0):
                 print(f"Base Price: ${base_price:.6f}")
                 print(f"Solana Price: ${sol_price:.6f}")
                 print(f"Price Difference: {price_diff:.2f}%")
+                print(f"Base Impact: {base_impact}")
+                print(f"Sol Impact: {sol_impact}")
                 print('--------------------------------------')
 
                 # Determine trading action
@@ -177,7 +199,7 @@ async def price_checker(delay: int = 1, init_amount: float = 1000.0):
                 else:
                     trade_action = "buy_sol_sell_base"
                 
-                if price_diff >= 0.001:
+                if price_diff >= 0.5:
                     print("Arbitrage opportunity found!")
                     print(f"Action: {trade_action}")
                     
@@ -194,6 +216,68 @@ async def price_checker(delay: int = 1, init_amount: float = 1000.0):
     return False, None, 0, 0
 
 """ Calculating Profits """
+def analyze_arb_quotes(quote_base, quote_sol, trade_action):
+    """
+    Analyze arbitrage quotes and calculate key metrics
+    
+    Args:
+        quote_base: Quote response from Odos
+        quote_sol: Quote response from Jupiter
+        trade_action: Either 'buy_base_sell_sol' or 'buy_sol_sell_base'
+        
+    Returns:
+        dict: Dictionary containing all key metrics
+    """
+    try:
+        # Initialize variables based on trade direction
+        if trade_action == 'buy_base_sell_sol':
+            # USDC -> LUNA (Base) and LUNA -> USDC (Sol)
+            luna_base = float(quote_base['outAmounts'][0]) / (10 ** 18)  # LUNA received from Base
+            usdc_base = float(quote_base['inValues'][0])   # USDC spent on Base
+            
+            luna_sol = float(quote_sol['inAmount']) / (10 ** 8)  # LUNA spent on Sol
+            usdc_sol = float(quote_sol['outAmount']) / (10 ** 6) # USDC received from Sol
+            
+        else:  # buy_sol_sell_base
+            # LUNA -> USDC (Base) and USDC -> LUNA (Sol)
+            luna_base = float(quote_base['inAmounts'][0]) / (10 ** 18)   # LUNA spent on Base
+            usdc_base = float(quote_base['outValues'][0])  # USDC received from Base
+            
+            luna_sol = float(quote_sol['outAmount']) / (10 ** 8)  # LUNA received from Sol
+            usdc_sol = float(quote_sol['inAmount']) / (10 ** 6)   # USDC spent on Sol
+        
+        # Calculate profit (in USDC)
+        if trade_action == 'buy_base_sell_sol':
+            profit = usdc_sol - usdc_base
+        else:
+            profit = usdc_base - usdc_sol
+            
+        # Create results dictionary
+        results = {
+            "action": trade_action,
+            "luna_sol": luna_sol,
+            "luna_base": luna_base,
+            "usdc_sol": usdc_sol,
+            "usdc_base": usdc_base,
+            "profit_usdc": profit,
+            "profit_bps": (profit / min(usdc_sol, usdc_base)) * 10000  # Profit in basis points
+        }
+        
+        # Print detailed analysis
+        print("\n=== Arbitrage Analysis ===")
+        print(f"Action: {trade_action}")
+        print(f"LUNA Sol: {luna_sol:.6f}")
+        print(f"LUNA Base: {luna_base:.6f}")
+        print(f"USDC Sol: ${usdc_sol:.2f}")
+        print(f"USDC Base: ${usdc_base:.2f}")
+        print(f"Profit: ${profit:.2f} ({results['profit_bps']:.1f} bps)")
+        print("========================\n")
+        
+        return results
+        
+    except Exception as e:
+        print(f"Error analyzing arbitrage quotes: {e}")
+        return None
 
 
 async def main():
@@ -258,7 +342,10 @@ async def main():
         quote_jupiter(sol_in, sol_out, sol_amount, sol_in_dec)
     )
 
-    save_trade_data(quote_base,'base.json')
+    # Analyze the quotes
+    arb_analysis = analyze_arb_quotes(quote_base, quote_sol, trade_action)
+    print(arb_analysis)
+    save_trade_data(quote_base, 'base.json')
     save_trade_data(quote_sol, 'sol.json')
 
     # 6. Assemble 
