@@ -29,10 +29,6 @@ def parse_price(data, source, out_decimals=6, init_amount=1000.0):
             price_per_token = total_out_amount / init_amount
             # Jupiter impact is not in percentage need to *100
             impact = float(data['priceImpactPct'])*100
-            
-            if impact == 0:
-                save_trade_data(data, 'file.json')
-            
             return price_per_token, impact
         
         elif source == "Odos":
@@ -70,19 +66,6 @@ def calc_ideal_swap(base_price, sol_price, base_impact, sol_impact, trade_action
     # sol_price = 0.09151
     # base_impact = 0.06  
     # sol_impact = 0.5  
-
-    # Downsize for testing
-    # base - 0.1
-    # sol - 0.2
-
-    # gap - 0.1
-    # target_gap - 0.05
-
-    # target_base - 0.125
-    # target_sol - 0.175
-
-    # - how much luna to buy to get target_base
-    # - how much luna to sell to get target_sol
 
     # Convert impact from percentage to decimal
     base_impact = base_impact / 100
@@ -199,7 +182,7 @@ async def price_checker(delay: int = 1, init_amount: float = 1000.0):
                 else:
                     trade_action = "buy_sol_sell_base"
                 
-                if price_diff >= 0.5:
+                if price_diff >= 1:
                     print("Arbitrage opportunity found!")
                     print(f"Action: {trade_action}")
                     
