@@ -7,6 +7,8 @@ import aiohttp
 from contracts.abi.erc20_approve_abi import erc20_abi
 from funcs import w3 , w3_async
 
+slippage = 3 # Default is 0.3%, current is 3%
+
 # Utils
 def convert_to_decimal_amount(amount: float, decimals: int) -> str:
     """Convert human readable amount to token decimal precision."""

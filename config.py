@@ -10,6 +10,10 @@ token_configs = {
             "usdc": {
                 "address": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
                 "decimals": 6
+            },
+            "virtual": {
+                "address": "0x0b3e328455c4059EEb9e3f84b5543F74E24e7E1b",
+                "decimals": 18
             }
         }
     },
@@ -22,6 +26,10 @@ token_configs = {
             "usdc": {
                 "address": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
                 "decimals": 6
+            },
+            "sol": {
+                "address": "So11111111111111111111111111111111111111112",
+                "decimals": 9
             }
         }
     }

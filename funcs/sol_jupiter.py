@@ -11,6 +11,8 @@ from solders.transaction import VersionedTransaction
 from solana.rpc.types import TxOpts
 from funcs import sol_client, sol_client_async
 
+slippage = 200 # Default is 50 = 0.05%, current is 2%
+
 # Utils
 def convert_to_decimal_amount(amount: float, decimals: int) -> str:
     """Convert human readable amount to token decimal precision."""
@@ -61,7 +63,7 @@ async def quote_jupiter(in_token, out_token, amount, in_decimals):
     """Get a quote from Jupiter for token swap."""
     decimal_amount = convert_to_decimal_amount(amount, in_decimals)
     
-    url = f"https://quote-api.jup.ag/v6/quote?inputMint={in_token}&outputMint={out_token}&amount={decimal_amount}"
+    url = f"https://quote-api.jup.ag/v6/quote?inputMint={in_token}&outputMint={out_token}&amount={decimal_amount}&slippageBps={slippage}"
     headers = {'Accept': 'application/json'}
 
     async with aiohttp.ClientSession() as session:
