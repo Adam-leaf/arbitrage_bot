@@ -38,6 +38,10 @@ async def quote_odos(in_token, out_token, amount, in_decimals, chain_id = '8453'
     
     base_url = "https://api.odos.xyz"
     decimal_amount = convert_to_decimal_amount(amount, in_decimals)
+    print(f"in_token type: {type(in_token)}")
+    print(f"out_token type: {type(out_token)}")
+    print(f"user_addrs type: {type(user_addrs)}")
+    print(f"decimal_amount type: {type(decimal_amount)}")
     
     payload = {
         "chainId": chain_id,
